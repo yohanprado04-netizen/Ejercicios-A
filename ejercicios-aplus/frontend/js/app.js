@@ -1,123 +1,51 @@
-const express = require('express');
-const router = express.Router();
-const QRCode = require('qrcode');
-const Ejercicio = require('../models/Ejercicio');
-const auth = require('../middleware/auth');
+(function () {
+  window.addEventListener('DOMContentLoaded', () => {
+    crearNodosFlotantes();
+    const token = localStorage.getItem('ea_token');
+    const userStr = localStorage.getItem('ea_user');
+    if (token && userStr) {
+      try {
+        const user = JSON.parse(userStr);
+        API.profile().then(res => {
+          if (res.success) { localStorage.setItem('ea_user', JSON.stringify(res.user)); iniciarApp(res.user); }
+          else { localStorage.removeItem('ea_token'); localStorage.removeItem('ea_user'); mostrarLogin(); }
+        }).catch(() => iniciarApp(user));
+      } catch (e) { localStorage.removeItem('ea_token'); localStorage.removeItem('ea_user'); mostrarLogin(); }
+    } else { mostrarLogin(); }
+    document.getElementById('loginPass')?.addEventListener('keydown', e => { if (e.key === 'Enter') login(); });
+    document.getElementById('codigoSalaInput')?.addEventListener('input', function () { this.value = this.value.toUpperCase(); });
+  });
 
-// Obtener ejercicio aleatorio
-router.get('/aleatorio', auth, async (req, res) => {
-  try {
-    const count = await Ejercicio.countDocuments({ activo: true });
-    const random = Math.floor(Math.random() * count);
-    const ejercicio = await Ejercicio.findOne({ activo: true }).skip(random);
-    if (!ejercicio) return res.status(404).json({ success: false, message: 'No hay ejercicios disponibles' });
-    // No enviar respuestas al frontend
-    const ejercicioSeguro = {
-      id: ejercicio.id,
-      titulo: ejercicio.titulo,
-      categoria: ejercicio.categoria,
-      descripcionGeneral: ejercicio.descripcionGeneral,
-      nivel: ejercicio.nivel,
-      datos: ejercicio.datos,
-      totalPistas: ejercicio.pistas.length,
-      pistas: ejercicio.pistas.map(p => ({
-        numero: p.numero,
-        descripcion: p.descripcion,
-        pregunta: p.pregunta,
-        pista: p.pista,
-        tipo: p.tipo,
-        puntos: p.puntos
-      }))
-    };
-    res.json({ success: true, ejercicio: ejercicioSeguro });
-  } catch (error) {
-    res.status(500).json({ success: false, message: error.message });
+  window.iniciarApp = function (userOverride) {
+    let user = userOverride || null;
+    if (!user) { try { user = JSON.parse(localStorage.getItem('ea_user')); } catch (e) {} }
+    if (!user) { mostrarLogin(); return; }
+    if (typeof window.setCurrentUser === 'function') window.setCurrentUser(user);
+    actualizarUIUsuario(user);
+    document.getElementById('app-login').classList.remove('active');
+    document.getElementById('app-main').classList.add('active');
+    showSection('home');
+  };
+
+  function actualizarUIUsuario(user) {
+    const nombre = user.nombre || user.username || 'Estudiante';
+    const set = (id, val) => { const el = document.getElementById(id); if (el) el.textContent = val; };
+    set('userAvatar', nombre.charAt(0).toUpperCase());
+    set('userNameDisplay', nombre.split(' ')[0]);
+    set('heroNombre', nombre.split(' ')[0]);
+    set('menuNombre', nombre);
+    set('menuUsername', '@' + (user.username || ''));
+    set('statQR', user.totalQrResueltos || 0);
+    set('statVictorias', user.totalVictorias || 0);
+    set('statPartidas', user.totalPartidasJugadas || 0);
+    set('gsQR', user.totalQrResueltos || 0);
+    set('gsVictorias', user.totalVictorias || 0);
+    set('gsPartidas', user.totalPartidasJugadas || 0);
+    set('gsPuntaje', user.puntajeTotal || 0);
   }
-});
 
-// Obtener ejercicio por ID (sin respuestas)
-router.get('/:id', auth, async (req, res) => {
-  try {
-    const ejercicio = await Ejercicio.findOne({ id: parseInt(req.params.id), activo: true });
-    if (!ejercicio) return res.status(404).json({ success: false, message: 'Ejercicio no encontrado' });
-    const ejercicioSeguro = {
-      id: ejercicio.id,
-      titulo: ejercicio.titulo,
-      categoria: ejercicio.categoria,
-      descripcionGeneral: ejercicio.descripcionGeneral,
-      nivel: ejercicio.nivel,
-      datos: ejercicio.datos,
-      totalPistas: ejercicio.pistas.length,
-      pistas: ejercicio.pistas.map(p => ({
-        numero: p.numero,
-        descripcion: p.descripcion,
-        pregunta: p.pregunta,
-        pista: p.pista,
-        tipo: p.tipo,
-        puntos: p.puntos
-      }))
-    };
-    res.json({ success: true, ejercicio: ejercicioSeguro });
-  } catch (error) {
-    res.status(500).json({ success: false, message: error.message });
+  function mostrarLogin() {
+    document.getElementById('app-login').classList.add('active');
+    document.getElementById('app-main').classList.remove('active');
   }
-});
-
-// Verificar respuesta
-router.post('/verificar', auth, async (req, res) => {
-  try {
-    const { ejercicioId, pistaNumero, respuesta } = req.body;
-    const ejercicio = await Ejercicio.findOne({ id: parseInt(ejercicioId) });
-    if (!ejercicio) return res.status(404).json({ success: false, message: 'Ejercicio no encontrado' });
-    const pista = ejercicio.pistas.find(p => p.numero === parseInt(pistaNumero));
-    if (!pista) return res.status(404).json({ success: false, message: 'Pista no encontrada' });
-
-    const respuestaNormalizada = respuesta.trim().toLowerCase().replace(/\s+/g, '');
-    const correctaNormalizada = pista.respuestaCorrecta.trim().toLowerCase().replace(/\s+/g, '');
-    const alternativas = (pista.respuestasAlternativas || []).map(r => r.trim().toLowerCase().replace(/\s+/g, ''));
-
-    const esCorrecta = respuestaNormalizada === correctaNormalizada || alternativas.includes(respuestaNormalizada);
-
-    if (esCorrecta) {
-      // Actualizar estadísticas del ejercicio
-      await Ejercicio.updateOne({ id: parseInt(ejercicioId) }, { $inc: { vecesJugado: 1 } });
-      res.json({ success: true, correcto: true, message: '¡Respuesta correcta! 🎉', puntos: pista.puntos });
-    } else {
-      res.json({ success: true, correcto: false, message: '❌ Fórmula incorrecta. ¡Intenta de nuevo!' });
-    }
-  } catch (error) {
-    res.status(500).json({ success: false, message: error.message });
-  }
-});
-
-// Generar QR para una pista
-router.post('/generar-qr', auth, async (req, res) => {
-  try {
-    const { ejercicioId, pistaNumero } = req.body;
-    const ejercicio = await Ejercicio.findOne({ id: parseInt(ejercicioId) });
-    if (!ejercicio) return res.status(404).json({ success: false, message: 'Ejercicio no encontrado' });
-    const pista = ejercicio.pistas.find(p => p.numero === parseInt(pistaNumero));
-    if (!pista) return res.status(404).json({ success: false, message: 'Pista no encontrada' });
-
-    const baseUrl = process.env.FRONTEND_URL || 'https://ejercicios-a.onrender.com';
-    const qrData = `${baseUrl}/?ej=${ejercicioId}&p=${pistaNumero}&t=${Date.now()}`;
-    const qrBase64 = await QRCode.toDataURL(qrData, {
-      width: 300,
-      margin: 2,
-      color: { dark: '#1a1a2e', light: '#ffffff' },
-      errorCorrectionLevel: 'M'
-    });
-
-    res.json({ success: true, qr: qrBase64, pista: {
-      numero: pista.numero,
-      descripcion: pista.descripcion,
-      pregunta: pista.pregunta,
-      pista: pista.pista,
-      tipo: pista.tipo
-    }});
-  } catch (error) {
-    res.status(500).json({ success: false, message: error.message });
-  }
-});
-
-module.exports = router;
+})();
