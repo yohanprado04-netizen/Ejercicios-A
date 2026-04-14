@@ -35,34 +35,6 @@ router.get('/aleatorio', auth, async (req, res) => {
   }
 });
 
-// Obtener ejercicio por ID (sin respuestas)
-router.get('/:id', auth, async (req, res) => {
-  try {
-    const ejercicio = await Ejercicio.findOne({ id: parseInt(req.params.id), activo: true });
-    if (!ejercicio) return res.status(404).json({ success: false, message: 'Ejercicio no encontrado' });
-    const ejercicioSeguro = {
-      id: ejercicio.id,
-      titulo: ejercicio.titulo,
-      categoria: ejercicio.categoria,
-      descripcionGeneral: ejercicio.descripcionGeneral,
-      nivel: ejercicio.nivel,
-      datos: ejercicio.datos,
-      totalPistas: ejercicio.pistas.length,
-      pistas: ejercicio.pistas.map(p => ({
-        numero: p.numero,
-        descripcion: p.descripcion,
-        pregunta: p.pregunta,
-        pista: p.pista,
-        tipo: p.tipo,
-        puntos: p.puntos
-      }))
-    };
-    res.json({ success: true, ejercicio: ejercicioSeguro });
-  } catch (error) {
-    res.status(500).json({ success: false, message: error.message });
-  }
-});
-
 // Verificar respuesta
 router.post('/verificar', auth, async (req, res) => {
   try {
@@ -79,7 +51,6 @@ router.post('/verificar', auth, async (req, res) => {
     const esCorrecta = respuestaNormalizada === correctaNormalizada || alternativas.includes(respuestaNormalizada);
 
     if (esCorrecta) {
-      // Actualizar estadísticas del ejercicio
       await Ejercicio.updateOne({ id: parseInt(ejercicioId) }, { $inc: { vecesJugado: 1 } });
       res.json({ success: true, correcto: true, message: '¡Respuesta correcta! 🎉', puntos: pista.puntos });
     } else {
@@ -115,6 +86,34 @@ router.post('/generar-qr', auth, async (req, res) => {
       pista: pista.pista,
       tipo: pista.tipo
     }});
+  } catch (error) {
+    res.status(500).json({ success: false, message: error.message });
+  }
+});
+
+// Obtener ejercicio por ID (sin respuestas)
+router.get('/:id', auth, async (req, res) => {
+  try {
+    const ejercicio = await Ejercicio.findOne({ id: parseInt(req.params.id), activo: true });
+    if (!ejercicio) return res.status(404).json({ success: false, message: 'Ejercicio no encontrado' });
+    const ejercicioSeguro = {
+      id: ejercicio.id,
+      titulo: ejercicio.titulo,
+      categoria: ejercicio.categoria,
+      descripcionGeneral: ejercicio.descripcionGeneral,
+      nivel: ejercicio.nivel,
+      datos: ejercicio.datos,
+      totalPistas: ejercicio.pistas.length,
+      pistas: ejercicio.pistas.map(p => ({
+        numero: p.numero,
+        descripcion: p.descripcion,
+        pregunta: p.pregunta,
+        pista: p.pista,
+        tipo: p.tipo,
+        puntos: p.puntos
+      }))
+    };
+    res.json({ success: true, ejercicio: ejercicioSeguro });
   } catch (error) {
     res.status(500).json({ success: false, message: error.message });
   }

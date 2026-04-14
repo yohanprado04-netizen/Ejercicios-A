@@ -21,7 +21,10 @@ function inicializarSocket() {
   socket.on('sala-info', (data) => {
     salaActual = data.codigoSala;
     esDueno = data.esDueno;
+    // Asegurarse de mostrar el código en todos los elementos donde aparece
     document.getElementById('salaCodigoDisplay').textContent = data.codigoSala;
+    const juegoCodigo = document.getElementById('salaCodigoJuego');
+    if (juegoCodigo) juegoCodigo.textContent = data.codigoSala;
     document.getElementById('btnIniciarPartida').style.display = esDueno ? 'flex' : 'none';
     actualizarListaParticipantes(data.participantes || []);
     if (data.estado === 'jugando') {
@@ -125,6 +128,9 @@ function mostrarPanelSala(codigo) {
   document.getElementById('comp-menu').classList.add('hidden');
   document.getElementById('comp-sala').classList.remove('hidden');
   document.getElementById('salaCodigoDisplay').textContent = codigo;
+  // También copiar al portapapeles automáticamente puede ayudar al usuario
+  const juegoCodigo = document.getElementById('salaCodigoJuego');
+  if (juegoCodigo) juegoCodigo.textContent = codigo;
 }
 
 function actualizarListaParticipantes(participantes) {
