@@ -1,0 +1,345 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>Ejercicios A+ | Nóminas Empresariales</title>
+<link rel="preconnect" href="https://fonts.googleapis.com"/>
+<link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;600;700;800&family=Space+Mono:wght@400;700&display=swap" rel="stylesheet"/>
+<link rel="stylesheet" href="css/style.css"/>
+</head>
+<body>
+<!-- ============ SPLASH / LOGIN ============ -->
+<div id="app-login" class="screen active">
+  <div class="login-bg">
+    <div class="grid-lines"></div>
+    <div class="floating-nodes" id="floatingNodes"></div>
+  </div>
+  <div class="login-container">
+    <div class="brand">
+      <div class="brand-icon">A<span>+</span></div>
+      <h1>Ejercicios A<span class="accent">+</span></h1>
+      <p class="brand-sub">Nóminas · Empresas · Excel</p>
+    </div>
+    <div class="auth-card" id="authCard">
+      <!-- Login Form -->
+      <div id="formLogin" class="auth-form active">
+        <h2>Iniciar Sesión</h2>
+        <div class="field-group">
+          <label>Usuario</label>
+          <input type="text" id="loginUser" placeholder="tu_usuario" autocomplete="username"/>
+        </div>
+        <div class="field-group">
+          <label>Contraseña</label>
+          <input type="password" id="loginPass" placeholder="••••••" autocomplete="current-password"/>
+        </div>
+        <div id="loginError" class="error-msg hidden"></div>
+        <button class="btn-primary" onclick="login()">Entrar <span>→</span></button>
+        <p class="switch-auth">¿Nuevo aquí? <a onclick="switchAuth('register')">Crear cuenta</a></p>
+      </div>
+      <!-- Register Form -->
+      <div id="formRegister" class="auth-form">
+        <h2>Crear Cuenta</h2>
+        <div class="field-group">
+          <label>Nombre completo</label>
+          <input type="text" id="regNombre" placeholder="Tu nombre"/>
+        </div>
+        <div class="field-group">
+          <label>Usuario</label>
+          <input type="text" id="regUser" placeholder="nombre_usuario"/>
+        </div>
+        <div class="field-group">
+          <label>Contraseña</label>
+          <input type="password" id="regPass" placeholder="Mínimo 4 caracteres"/>
+        </div>
+        <div id="regError" class="error-msg hidden"></div>
+        <button class="btn-primary" onclick="register()">Registrarse <span>→</span></button>
+        <p class="switch-auth">¿Ya tienes cuenta? <a onclick="switchAuth('login')">Iniciar sesión</a></p>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ============ MAIN APP ============ -->
+<div id="app-main" class="screen">
+  <!-- Top Bar -->
+  <header class="topbar">
+    <div class="topbar-left">
+      <div class="brand-mini">A<span>+</span></div>
+      <span class="app-name">Ejercicios A+</span>
+    </div>
+    <div class="topbar-center">
+      <nav class="main-nav">
+        <button class="nav-btn active" onclick="showSection('home')" data-section="home">🏠 Inicio</button>
+        <button class="nav-btn" onclick="showSection('practica')" data-section="practica">📚 Práctica</button>
+        <button class="nav-btn" onclick="showSection('competencia')" data-section="competencia">⚡ Competencia</button>
+        <button class="nav-btn" onclick="showSection('historial')" data-section="historial">📊 Historial</button>
+      </nav>
+    </div>
+    <div class="topbar-right">
+      <div class="user-chip" onclick="toggleUserMenu()">
+        <div class="user-avatar" id="userAvatar">?</div>
+        <span id="userNameDisplay">Usuario</span>
+        <span class="chevron">▾</span>
+      </div>
+      <div class="user-menu hidden" id="userMenu">
+        <div class="user-menu-header">
+          <div id="menuNombre"></div>
+          <div id="menuUsername" class="muted"></div>
+        </div>
+        <div class="user-menu-stats">
+          <div class="stat-chip"><span id="statQR">0</span><small>QR</small></div>
+          <div class="stat-chip"><span id="statVictorias">0</span><small>🏆</small></div>
+          <div class="stat-chip"><span id="statPartidas">0</span><small>Partidas</small></div>
+        </div>
+        <button class="menu-item" onclick="logout()">🚪 Cerrar sesión</button>
+      </div>
+    </div>
+  </header>
+
+  <!-- ===== HOME ===== -->
+  <section id="sec-home" class="app-section active">
+    <div class="hero-section">
+      <div class="hero-text">
+        <h2>Bienvenido, <span id="heroNombre" class="accent">Estudiante</span></h2>
+        <p>Practica cálculos de nóminas empresariales con más de 1.000 ejercicios interactivos</p>
+      </div>
+      <div class="hero-cards">
+        <div class="hero-card" onclick="showSection('practica')">
+          <div class="hcard-icon">📚</div>
+          <div class="hcard-title">Práctica</div>
+          <div class="hcard-desc">Resuelve ejercicios con 20 QR cada uno</div>
+        </div>
+        <div class="hero-card accent-card" onclick="showSection('competencia')">
+          <div class="hcard-icon">⚡</div>
+          <div class="hcard-title">Competencia</div>
+          <div class="hcard-desc">Compite en tiempo real con tus compañeros</div>
+        </div>
+        <div class="hero-card" onclick="showSection('historial')">
+          <div class="hcard-icon">📊</div>
+          <div class="hcard-title">Historial</div>
+          <div class="hcard-desc">Revisa tus partidas anteriores</div>
+        </div>
+      </div>
+      <div class="global-stats">
+        <div class="gstat"><span id="gsQR" class="gstat-num">0</span><span>QR Resueltos</span></div>
+        <div class="gstat-div"></div>
+        <div class="gstat"><span id="gsVictorias" class="gstat-num">0</span><span>Victorias</span></div>
+        <div class="gstat-div"></div>
+        <div class="gstat"><span id="gsPartidas" class="gstat-num">0</span><span>Partidas</span></div>
+        <div class="gstat-div"></div>
+        <div class="gstat"><span id="gsPuntaje" class="gstat-num">0</span><span>Puntaje</span></div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ===== PRACTICA ===== -->
+  <section id="sec-practica" class="app-section">
+    <!-- Estado: sin ejercicio -->
+    <div id="practica-inicio" class="panel-center">
+      <div class="panel-icon">📚</div>
+      <h3>Modo Práctica Individual</h3>
+      <p>Se asignará un ejercicio aleatorio sobre nóminas empresariales.<br/>Deberás resolver 20 QR secuenciales con fórmulas de Excel.</p>
+      <button class="btn-primary big" onclick="iniciarPractica()">🎲 Nuevo Ejercicio Aleatorio</button>
+    </div>
+    <!-- Estado: ejercicio activo -->
+    <div id="practica-juego" class="hidden">
+      <div class="ejercicio-header">
+        <div>
+          <div class="ej-titulo" id="ejTitulo">Ejercicio</div>
+          <div class="ej-cat" id="ejCategoria">Categoría</div>
+        </div>
+        <div class="ej-progress">
+          <div class="progress-text"><span id="progActual">0</span>/20 QR</div>
+          <div class="progress-bar-wrap"><div class="progress-bar" id="progressBar"></div></div>
+        </div>
+        <button class="btn-outline small" onclick="abandonarPractica()">✕ Salir</button>
+      </div>
+      <!-- Descripción del ejercicio -->
+      <div class="ejercicio-desc" id="ejDesc"></div>
+      <!-- Grid de QR codes -->
+      <div class="qr-grid" id="qrGrid"></div>
+      <!-- Panel de resolución -->
+      <div class="resolver-panel" id="resolverPanel" style="display:none">
+        <div class="resolver-header">
+          <span class="resolver-num" id="resolverNum">QR #1</span>
+          <button class="btn-icon" onclick="cerrarResolver()">✕</button>
+        </div>
+        <div class="resolver-desc" id="resolverDesc"></div>
+        <div class="resolver-pregunta" id="resolverPregunta"></div>
+        <div class="resolver-pista" id="resolverPista"></div>
+        <div class="resolver-input-wrap">
+          <input type="text" id="resolverInput" class="resolver-input" placeholder="Escribe la fórmula o respuesta..." onkeydown="if(event.key==='Enter') verificarRespuesta()"/>
+          <button class="btn-verificar" onclick="verificarRespuesta()">Verificar ✓</button>
+        </div>
+        <div class="resolver-feedback hidden" id="resolverFeedback"></div>
+        <div class="resolver-intentos">Intentos: <span id="intentosCount">0</span></div>
+      </div>
+      <!-- Celebración al completar -->
+      <div class="celebracion hidden" id="celebracion">
+        <div class="celeb-content">
+          <div class="celeb-icon">🏆</div>
+          <h2>¡Ejercicio Completado!</h2>
+          <p>Has resuelto los 20 QR correctamente</p>
+          <button class="btn-primary" onclick="iniciarPractica()">Nuevo Ejercicio</button>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ===== COMPETENCIA ===== -->
+  <section id="sec-competencia" class="app-section">
+    <!-- Opciones iniciales -->
+    <div id="comp-menu" class="panel-center">
+      <div class="panel-icon">⚡</div>
+      <h3>Modo Competencia</h3>
+      <p>Conéctate con tus compañeros y compite en tiempo real. Todos resuelven el mismo ejercicio.</p>
+      <div class="comp-options">
+        <div class="comp-card" onclick="mostrarCrearSala()">
+          <div class="comp-card-icon">🎮</div>
+          <div class="comp-card-title">Crear Sala</div>
+          <div class="comp-card-desc">Genera un código para que se unan tus compañeros</div>
+        </div>
+        <div class="comp-card" onclick="mostrarUnirseSala()">
+          <div class="comp-card-icon">🔗</div>
+          <div class="comp-card-title">Unirse a Sala</div>
+          <div class="comp-card-desc">Ingresa el código de la sala para unirte</div>
+        </div>
+      </div>
+      <!-- Crear sala -->
+      <div id="panelCrear" class="hidden sub-panel">
+        <h4>Crear Nueva Sala</h4>
+        <button class="btn-primary" onclick="crearSala()">🎲 Crear Sala Aleatoria</button>
+      </div>
+      <!-- Unirse sala -->
+      <div id="panelUnirse" class="hidden sub-panel">
+        <h4>Unirse a Sala</h4>
+        <div class="field-row">
+          <input type="text" id="codigoSalaInput" placeholder="Código de sala (ej: ABC123)" maxlength="6" style="text-transform:uppercase"/>
+          <button class="btn-primary" onclick="unirseSala()">Unirse →</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Sala de espera -->
+    <div id="comp-sala" class="hidden">
+      <div class="sala-header">
+        <div>
+          <h3>Sala de Competencia</h3>
+          <div class="sala-codigo-wrap">
+            <span>Código: </span>
+            <span class="sala-codigo" id="salaCodigoDisplay">------</span>
+            <button class="btn-icon" onclick="copiarCodigo()">📋</button>
+          </div>
+        </div>
+        <button class="btn-outline" onclick="salirSala()">✕ Salir</button>
+      </div>
+      <div class="sala-content">
+        <div class="sala-participantes">
+          <h4>Participantes (<span id="numParticipantes">0</span>)</h4>
+          <div class="participantes-list" id="participantesList"></div>
+        </div>
+        <div class="sala-actions">
+          <div id="btnIniciarWrap">
+            <button class="btn-primary big" id="btnIniciarPartida" onclick="iniciarPartidaComp()" style="display:none">🚀 Iniciar Partida</button>
+          </div>
+          <div class="sala-status" id="salaStatus">Esperando jugadores...</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Competencia en juego -->
+    <div id="comp-juego" class="hidden">
+      <div class="comp-juego-layout">
+        <!-- Panel izquierdo: marcador -->
+        <div class="marcador-panel">
+          <h4>🏆 Marcador en Vivo</h4>
+          <div class="marcador-list" id="marcadorList"></div>
+          <div class="sala-info-small">
+            Sala: <strong id="salaCodigoJuego"></strong>
+          </div>
+        </div>
+        <!-- Panel derecho: ejercicio -->
+        <div class="comp-ejercicio-panel">
+          <div class="ejercicio-header">
+            <div>
+              <div class="ej-titulo" id="compEjTitulo">Ejercicio</div>
+              <div class="ej-cat" id="compEjCategoria">Categoría</div>
+            </div>
+            <div class="ej-progress">
+              <div class="progress-text"><span id="compProgActual">0</span>/20 QR</div>
+              <div class="progress-bar-wrap"><div class="progress-bar" id="compProgressBar"></div></div>
+            </div>
+          </div>
+          <div class="qr-grid" id="compQrGrid"></div>
+          <!-- Panel resolver competencia -->
+          <div class="resolver-panel" id="compResolverPanel" style="display:none">
+            <div class="resolver-header">
+              <span class="resolver-num" id="compResolverNum">QR #1</span>
+              <button class="btn-icon" onclick="cerrarCompResolver()">✕</button>
+            </div>
+            <div class="resolver-desc" id="compResolverDesc"></div>
+            <div class="resolver-pregunta" id="compResolverPregunta"></div>
+            <div class="resolver-pista" id="compResolverPista"></div>
+            <div class="resolver-input-wrap">
+              <input type="text" id="compResolverInput" class="resolver-input" placeholder="Escribe la fórmula o respuesta..." onkeydown="if(event.key==='Enter') verificarRespuestaComp()"/>
+              <button class="btn-verificar" onclick="verificarRespuestaComp()">Verificar ✓</button>
+            </div>
+            <div class="resolver-feedback hidden" id="compResolverFeedback"></div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Pantalla de fin -->
+    <div id="comp-fin" class="hidden">
+      <div class="podio-wrap">
+        <h2>🏁 ¡Competencia Finalizada!</h2>
+        <div class="podio" id="podio"></div>
+        <div class="resultados-table" id="resultadosTable"></div>
+        <button class="btn-primary" onclick="volverCompMenu()">Nueva Competencia</button>
+      </div>
+    </div>
+  </section>
+
+  <!-- ===== HISTORIAL ===== -->
+  <section id="sec-historial" class="app-section">
+    <div class="historial-header">
+      <h3>📊 Mis Partidas</h3>
+      <button class="btn-outline" onclick="cargarHistorial()">🔄 Actualizar</button>
+    </div>
+    <div class="historial-stats" id="historialStats"></div>
+    <div class="historial-list" id="historialList">
+      <div class="loading-state">Cargando historial...</div>
+    </div>
+  </section>
+</div>
+
+<!-- Toast notifications -->
+<div id="toastContainer" class="toast-container"></div>
+
+<!-- QR Scanner Modal -->
+<div id="qrModal" class="modal hidden">
+  <div class="modal-overlay" onclick="cerrarQrModal()"></div>
+  <div class="modal-content qr-modal-content">
+    <div class="modal-header">
+      <h3 id="qrModalTitle">QR Code</h3>
+      <button class="btn-icon" onclick="cerrarQrModal()">✕</button>
+    </div>
+    <div class="qr-display">
+      <img id="qrImage" src="" alt="QR Code"/>
+    </div>
+    <p id="qrModalDesc" class="qr-desc"></p>
+  </div>
+</div>
+
+<script src="https://cdn.socket.io/4.7.1/socket.io.min.js"></script>
+<script src="js/api.js"></script>
+<script src="js/auth.js"></script>
+<script src="js/practica.js"></script>
+<script src="js/competencia.js"></script>
+<script src="js/historial.js"></script>
+<script src="js/ui.js"></script>
+<script src="js/app.js"></script>
+</body>
+</html>

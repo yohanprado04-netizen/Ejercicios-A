@@ -1,0 +1,18 @@
+services:
+  - type: web
+    name: ejercicios-aplus
+    env: node
+    region: oregon
+    plan: free
+    rootDir: backend
+    buildCommand: npm install && node seed.js
+    startCommand: node server.js
+    envVars:
+      - key: MONGODB_URI
+        value: mongodb+srv://yohanprado04_db_user:pradera123@prado04.t4d8ob8.mongodb.net/?retryWrites=true&w=majority&appName=prado04
+      - key: JWT_SECRET
+        value: ejerciciosAplus_super_secret_key_2024_nominas_colombia
+      - key: NODE_ENV
+        value: production
+      - key: PORT
+        value: 3000
