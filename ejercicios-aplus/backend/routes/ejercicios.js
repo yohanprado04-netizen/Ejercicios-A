@@ -99,11 +99,8 @@ router.post('/generar-qr', auth, async (req, res) => {
     const pista = ejercicio.pistas.find(p => p.numero === parseInt(pistaNumero));
     if (!pista) return res.status(404).json({ success: false, message: 'Pista no encontrada' });
 
-    const qrData = JSON.stringify({
-      ej: ejercicioId,
-      p: pistaNumero,
-      t: Date.now()
-    });
+    const baseUrl = process.env.FRONTEND_URL || 'https://ejercicios-a.onrender.com';
+    const qrData = `${baseUrl}/?ej=${ejercicioId}&p=${pistaNumero}&t=${Date.now()}`;
     const qrBase64 = await QRCode.toDataURL(qrData, {
       width: 300,
       margin: 2,
