@@ -1,8 +1,9 @@
-// practica.js
+// practica.js — versión mejorada
 let ejercicioActual = null;
-let progresoPractica = []; // qrs resueltos
+let progresoPractica = [];
 let pistaActual = null;
 let intentos = 0;
+const MAX_INTENTOS_PISTA = 3; // después de 3 intentos, mostrar pista extra
 
 async function iniciarPractica() {
   document.getElementById('celebracion').classList.add('hidden');
@@ -34,8 +35,10 @@ function renderQrGrid() {
   for (let i = 0; i < total; i++) {
     const num = i + 1;
     const resuelto = progresoPractica.includes(num);
-    const esCurrent = !resuelto && (progresoPractica.length === i);
-    const locked = !resuelto && progresoPractica.length < i;
+    // Cualquier QR hasta el siguiente disponible está desbloqueado
+    const siguienteDisponible = progresoPractica.length + 1;
+    const locked = !resuelto && num > siguienteDisponible;
+    const esCurrent = !resuelto && num === siguienteDisponible;
 
     const item = document.createElement('div');
     item.className = `qr-item ${resuelto ? 'solved' : ''} ${locked ? 'locked' : ''} ${esCurrent ? 'current' : ''}`;
@@ -71,13 +74,25 @@ async function abrirResolver(num) {
   document.getElementById('resolverNum').textContent = `QR #${num}`;
   document.getElementById('resolverDesc').textContent = pista.descripcion;
   document.getElementById('resolverPregunta').textContent = pista.pregunta;
-  document.getElementById('resolverPista').textContent = `💡 Pista: ${pista.pista || 'Analiza el enunciado'}`;
+
+  // Mostrar pista con formato de respuesta esperado
+  const tipoLabel = pista.tipo === 'formula' ? '📐 Fórmula Excel'
+    : pista.tipo === 'valor' ? '🔢 Valor numérico o %'
+    : '📝 Texto';
+  document.getElementById('resolverPista').innerHTML =
+    `💡 <b>Pista:</b> ${pista.pista || 'Analiza el enunciado'}<br>
+     <small style="color:#888">Formato esperado: <b>${tipoLabel}</b></small>`;
+
   document.getElementById('resolverInput').value = '';
   document.getElementById('intentosCount').textContent = '0';
   document.getElementById('resolverFeedback').classList.add('hidden');
+
+  // Ocultar bloque de pista extra al abrir nuevo QR
+  const pistaExtraDiv = document.getElementById('pistaExtraDiv');
+  if (pistaExtraDiv) pistaExtraDiv.style.display = 'none';
+
   document.getElementById('resolverPanel').style.display = 'block';
   document.getElementById('resolverInput').focus();
-
   document.getElementById('resolverPanel').scrollIntoView({ behavior: 'smooth', block: 'center' });
 }
 
@@ -104,14 +119,45 @@ async function verificarRespuesta() {
       if (progresoPractica.length >= ejercicioActual.pistas.length) {
         completarPractica();
       } else {
-        // Auto-abrir siguiente
+        // Auto-abrir siguiente QR
         setTimeout(() => abrirResolver(pistaActual + 1), 600);
       }
     }, 1200);
   } else {
-    feedback.textContent = res.message || '❌ Fórmula incorrecta. ¡Intenta de nuevo!';
+    // Mostrar mensaje de error
+    feedback.textContent = '❌ Respuesta incorrecta. ¡Revisa la pista y vuelve a intentarlo!';
     feedback.classList.add('err');
     document.getElementById('resolverInput').select();
+
+    // Después de MAX_INTENTOS_PISTA intentos, mostrar pista extra con ejemplos
+    if (intentos >= MAX_INTENTOS_PISTA) {
+      mostrarPistaExtra();
+    }
+  }
+}
+
+async function mostrarPistaExtra() {
+  let pistaExtraDiv = document.getElementById('pistaExtraDiv');
+  if (!pistaExtraDiv) {
+    pistaExtraDiv = document.createElement('div');
+    pistaExtraDiv.id = 'pistaExtraDiv';
+    pistaExtraDiv.style.cssText = 'background:#fff3cd;border:1px solid #ffc107;border-radius:8px;padding:12px;margin-top:10px;font-size:0.9em;';
+    document.getElementById('resolverPanel').appendChild(pistaExtraDiv);
+  }
+
+  // Pedir pista extra al servidor
+  const res = await API.pistaExtra({ ejercicioId: ejercicioActual.id, pistaNumero: pistaActual });
+  if (res && res.success) {
+    const alts = res.alternativas && res.alternativas.length
+      ? `<br><b>Formas aceptadas:</b> ${res.alternativas.slice(0, 3).join(', ')}`
+      : '';
+    pistaExtraDiv.innerHTML = `
+      🆘 <b>Pista adicional (después de ${intentos} intentos):</b><br>
+      ${res.pista}<br>
+      ${alts}<br>
+      <small>${res.formatoEjemplo}</small>
+    `;
+    pistaExtraDiv.style.display = 'block';
   }
 }
 
@@ -161,7 +207,6 @@ function formatCategoria(cat) {
 
 // Abrir ejercicio específico desde escaneo de QR (parámetros en URL)
 async function abrirEjercicioDesdeQR(ejId, pistaNum) {
-  // Mostrar panel de juego
   document.getElementById('celebracion').classList.add('hidden');
   document.getElementById('practica-inicio').classList.add('hidden');
   document.getElementById('practica-juego').classList.remove('hidden');
@@ -169,18 +214,15 @@ async function abrirEjercicioDesdeQR(ejId, pistaNum) {
   const qrGrid = document.getElementById('qrGrid');
   qrGrid.innerHTML = '<div class="loading-state">Cargando ejercicio...</div>';
 
-  // Si ya tenemos ese ejercicio cargado, no volver a pedirlo
   if (!ejercicioActual || ejercicioActual.id !== ejId) {
     const res = await API.ejercicioById(ejId);
     if (!res.success) {
-      // Si falla (ej. ejercicio no encontrado), cargar uno aleatorio
       const res2 = await API.ejercicioAleatorio();
       if (!res2.success) { toast('Error al cargar ejercicio', 'error'); return; }
       ejercicioActual = res2.ejercicio;
       progresoPractica = [];
     } else {
       ejercicioActual = res.ejercicio;
-      // Mantener progreso si es el mismo ejercicio, si no, reiniciar
       if (!ejercicioActual || ejercicioActual.id !== ejId) progresoPractica = [];
     }
   }
@@ -192,7 +234,6 @@ async function abrirEjercicioDesdeQR(ejId, pistaNum) {
   actualizarProgreso(progresoPractica.length);
   renderQrGrid();
 
-  // Abrir directamente el resolver de esa pista
   const pistaExiste = ejercicioActual.pistas.find(p => p.numero === pistaNum);
   if (pistaExiste && !progresoPractica.includes(pistaNum)) {
     setTimeout(() => abrirResolver(pistaNum), 400);
@@ -202,8 +243,6 @@ async function abrirEjercicioDesdeQR(ejId, pistaNum) {
 }
 
 window.abrirEjercicioDesdeQR = abrirEjercicioDesdeQR;
-
-
 window.cerrarResolver = cerrarResolver;
 window.verificarRespuesta = verificarRespuesta;
 window.abandonarPractica = abandonarPractica;

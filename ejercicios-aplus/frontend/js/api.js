@@ -31,6 +31,7 @@ const API = {
   ejercicioById: (id) => apiCall('GET', `/ejercicios/${id}`),
   verificar: (d) => apiCall('POST', '/ejercicios/verificar', d),
   generarQR: (d) => apiCall('POST', '/ejercicios/generar-qr', d),
+  pistaExtra: (d) => apiCall('POST', '/ejercicios/pista-extra', d),  // ← nueva
 
   // Partidas
   crearSala: (d) => apiCall('POST', '/partidas/crear', d),
