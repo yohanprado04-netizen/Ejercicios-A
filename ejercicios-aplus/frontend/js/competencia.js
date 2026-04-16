@@ -10,7 +10,14 @@ function inicializarSocket() {
   if (socket && socket.connected) return;
   socket = io(window.location.origin, { transports: ['websocket', 'polling'] });
 
-  socket.on('connect', () => console.log('🔌 Socket conectado'));
+  socket.on('connect', () => {
+    console.log('🔌 Socket conectado');
+    // Si hay una sala pendiente de unirse, hacerlo ahora que el socket está listo
+    if (window._pendingJoin) {
+      socket.emit('unirse-sala', window._pendingJoin);
+      window._pendingJoin = null;
+    }
+  });
   socket.on('disconnect', () => console.log('🔌 Socket desconectado'));
 
   socket.on('actualizacion-sala', (data) => {
@@ -88,15 +95,23 @@ async function crearSala() {
   salaActual = res.codigoSala;
   esDueno = true;
 
+  // Mostrar la pantalla de sala inmediatamente sin esperar al socket
+  mostrarPanelSala(res.codigoSala);
+
   const user = window.getCurrentUser();
-  socket.emit('unirse-sala', {
+  const joinData = {
     codigoSala: res.codigoSala,
     userId: user._id,
     username: user.username,
     nombre: user.nombre
-  });
+  };
 
-  mostrarPanelSala(res.codigoSala);
+  // Si el socket ya está conectado, emitir ahora; si no, guardar para cuando conecte
+  if (socket && socket.connected) {
+    socket.emit('unirse-sala', joinData);
+  } else {
+    window._pendingJoin = joinData;
+  }
 }
 
 async function unirseSala() {
@@ -110,15 +125,23 @@ async function unirseSala() {
   salaActual = codigo;
   esDueno = false;
 
+  // Mostrar pantalla de sala inmediatamente
+  mostrarPanelSala(codigo);
+
   const user = window.getCurrentUser();
-  socket.emit('unirse-sala', {
+  const joinData = {
     codigoSala: codigo,
     userId: user._id,
     username: user.username,
     nombre: user.nombre
-  });
+  };
 
-  mostrarPanelSala(codigo);
+  if (socket && socket.connected) {
+    socket.emit('unirse-sala', joinData);
+  } else {
+    window._pendingJoin = joinData;
+  }
+
   if (res.estado === 'jugando') {
     await cargarEjercicioComp(res.ejercicioId);
   }
@@ -128,9 +151,10 @@ function mostrarPanelSala(codigo) {
   document.getElementById('comp-menu').classList.add('hidden');
   document.getElementById('comp-sala').classList.remove('hidden');
   document.getElementById('salaCodigoDisplay').textContent = codigo;
-  // También copiar al portapapeles automáticamente puede ayudar al usuario
   const juegoCodigo = document.getElementById('salaCodigoJuego');
   if (juegoCodigo) juegoCodigo.textContent = codigo;
+  // Mostrar botón de iniciar si es dueño (esDueno ya fue seteado antes de llamar aquí)
+  document.getElementById('btnIniciarPartida').style.display = esDueno ? 'flex' : 'none';
 }
 
 function actualizarListaParticipantes(participantes) {

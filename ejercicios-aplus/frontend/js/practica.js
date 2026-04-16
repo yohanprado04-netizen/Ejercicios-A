@@ -159,7 +159,51 @@ function formatCategoria(cat) {
   return map[cat] || cat;
 }
 
-window.iniciarPractica = iniciarPractica;
+// Abrir ejercicio específico desde escaneo de QR (parámetros en URL)
+async function abrirEjercicioDesdeQR(ejId, pistaNum) {
+  // Mostrar panel de juego
+  document.getElementById('celebracion').classList.add('hidden');
+  document.getElementById('practica-inicio').classList.add('hidden');
+  document.getElementById('practica-juego').classList.remove('hidden');
+
+  const qrGrid = document.getElementById('qrGrid');
+  qrGrid.innerHTML = '<div class="loading-state">Cargando ejercicio...</div>';
+
+  // Si ya tenemos ese ejercicio cargado, no volver a pedirlo
+  if (!ejercicioActual || ejercicioActual.id !== ejId) {
+    const res = await API.ejercicioById(ejId);
+    if (!res.success) {
+      // Si falla (ej. ejercicio no encontrado), cargar uno aleatorio
+      const res2 = await API.ejercicioAleatorio();
+      if (!res2.success) { toast('Error al cargar ejercicio', 'error'); return; }
+      ejercicioActual = res2.ejercicio;
+      progresoPractica = [];
+    } else {
+      ejercicioActual = res.ejercicio;
+      // Mantener progreso si es el mismo ejercicio, si no, reiniciar
+      if (!ejercicioActual || ejercicioActual.id !== ejId) progresoPractica = [];
+    }
+  }
+
+  document.getElementById('ejTitulo').textContent = ejercicioActual.titulo;
+  document.getElementById('ejCategoria').textContent = formatCategoria(ejercicioActual.categoria);
+  document.getElementById('ejDesc').textContent = ejercicioActual.descripcionGeneral;
+
+  actualizarProgreso(progresoPractica.length);
+  renderQrGrid();
+
+  // Abrir directamente el resolver de esa pista
+  const pistaExiste = ejercicioActual.pistas.find(p => p.numero === pistaNum);
+  if (pistaExiste && !progresoPractica.includes(pistaNum)) {
+    setTimeout(() => abrirResolver(pistaNum), 400);
+  } else if (pistaExiste && progresoPractica.includes(pistaNum)) {
+    toast(`QR #${pistaNum} ya fue resuelto ✅`, 'success');
+  }
+}
+
+window.abrirEjercicioDesdeQR = abrirEjercicioDesdeQR;
+
+
 window.cerrarResolver = cerrarResolver;
 window.verificarRespuesta = verificarRespuesta;
 window.abandonarPractica = abandonarPractica;
