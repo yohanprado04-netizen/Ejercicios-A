@@ -61,14 +61,21 @@ async function abrirResolver(num) {
   pistaActual = num;
   intentos = 0;
 
-  // Generar QR visual
+  // Generar QR visual y mostrarlo con toda la info de la pista
   const qrRes = await API.generarQR({ ejercicioId: ejercicioActual.id, pistaNumero: num });
   if (qrRes.success && qrRes.qr) {
     document.getElementById('qrImage').src = qrRes.qr;
-    document.getElementById('qrModalTitle').textContent = `QR #${num}`;
-    document.getElementById('qrModalDesc').textContent = pista.descripcion;
+    document.getElementById('qrModalTitle').textContent = `QR #${num} — ${pista.descripcion}`;
+    // Mostrar pregunta y pista dentro del modal QR
+    const tipoLabel = pista.tipo === 'formula' ? '📐 Fórmula Excel'
+      : pista.tipo === 'valor' ? '🔢 Valor numérico o %'
+      : '📝 Texto';
+    document.getElementById('qrModalDesc').innerHTML =
+      `<strong>${pista.pregunta}</strong><br>
+       <span style="color:#aaa;font-size:12px">💡 ${pista.pista || 'Analiza el enunciado'}</span><br>
+       <span style="color:#888;font-size:11px">Formato: ${tipoLabel}</span>`;
     document.getElementById('qrModal').classList.remove('hidden');
-    setTimeout(() => document.getElementById('qrModal').classList.add('hidden'), 2500);
+    // NO se cierra automáticamente — el usuario lo cierra cuando ya leyó
   }
 
   document.getElementById('resolverNum').textContent = `QR #${num}`;
@@ -141,7 +148,17 @@ async function mostrarPistaExtra() {
   if (!pistaExtraDiv) {
     pistaExtraDiv = document.createElement('div');
     pistaExtraDiv.id = 'pistaExtraDiv';
-    pistaExtraDiv.style.cssText = 'background:#fff3cd;border:1px solid #ffc107;border-radius:8px;padding:12px;margin-top:10px;font-size:0.9em;';
+    pistaExtraDiv.style.cssText = [
+      'background:#000',
+      'color:#fff',
+      'border-radius:10px',
+      'padding:16px 18px',
+      'margin-top:14px',
+      'font-size:0.92em',
+      'line-height:1.6',
+      'border:1px solid #333',
+      'box-shadow:0 4px 20px rgba(0,0,0,0.6)'
+    ].join(';');
     document.getElementById('resolverPanel').appendChild(pistaExtraDiv);
   }
 
@@ -149,13 +166,15 @@ async function mostrarPistaExtra() {
   const res = await API.pistaExtra({ ejercicioId: ejercicioActual.id, pistaNumero: pistaActual });
   if (res && res.success) {
     const alts = res.alternativas && res.alternativas.length
-      ? `<br><b>Formas aceptadas:</b> ${res.alternativas.slice(0, 3).join(', ')}`
+      ? `<div style="margin-top:8px;color:#ccc">✅ <b>Formas aceptadas:</b> ${res.alternativas.slice(0, 3).join(', ')}</div>`
       : '';
     pistaExtraDiv.innerHTML = `
-      🆘 <b>Pista adicional (después de ${intentos} intentos):</b><br>
-      ${res.pista}<br>
-      ${alts}<br>
-      <small>${res.formatoEjemplo}</small>
+      <div style="font-size:1em;font-weight:700;color:#f59e0b;margin-bottom:8px">
+        🆘 Ayuda tras ${intentos} intentos
+      </div>
+      <div style="color:#e5e5e5">${res.pista}</div>
+      ${alts}
+      <div style="margin-top:8px;color:#9ca3af;font-size:0.85em">${res.formatoEjemplo}</div>
     `;
     pistaExtraDiv.style.display = 'block';
   }

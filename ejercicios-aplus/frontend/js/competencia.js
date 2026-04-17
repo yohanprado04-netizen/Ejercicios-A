@@ -5,6 +5,8 @@ let esDueno = false;
 let ejercicioComp = null;
 let progresoComp = [];
 let pistaCompActual = null;
+let intentosComp = 0;
+const MAX_INTENTOS_COMP = 3;
 
 function inicializarSocket() {
   if (socket && socket.connected) return;
@@ -226,22 +228,39 @@ async function abrirResolverComp(num) {
   const pista = ejercicioComp.pistas.find(p => p.numero === num);
   if (!pista) return;
   pistaCompActual = num;
+  intentosComp = 0;
 
   const qrRes = await API.generarQR({ ejercicioId: ejercicioComp.id, pistaNumero: num });
   if (qrRes.success && qrRes.qr) {
     document.getElementById('qrImage').src = qrRes.qr;
-    document.getElementById('qrModalTitle').textContent = `QR #${num}`;
-    document.getElementById('qrModalDesc').textContent = pista.descripcion;
+    document.getElementById('qrModalTitle').textContent = `QR #${num} — ${pista.descripcion}`;
+    const tipoLabel = pista.tipo === 'formula' ? '📐 Fórmula Excel'
+      : pista.tipo === 'valor' ? '🔢 Valor numérico o %'
+      : '📝 Texto';
+    document.getElementById('qrModalDesc').innerHTML =
+      `<strong>${pista.pregunta}</strong><br>
+       <span style="color:#aaa;font-size:12px">💡 ${pista.pista || 'Analiza el enunciado'}</span><br>
+       <span style="color:#888;font-size:11px">Formato: ${tipoLabel}</span>`;
     document.getElementById('qrModal').classList.remove('hidden');
-    setTimeout(() => document.getElementById('qrModal').classList.add('hidden'), 2500);
+    // No se cierra automáticamente
   }
 
   document.getElementById('compResolverNum').textContent = `QR #${num}`;
   document.getElementById('compResolverDesc').textContent = pista.descripcion;
   document.getElementById('compResolverPregunta').textContent = pista.pregunta;
-  document.getElementById('compResolverPista').textContent = `💡 Pista: ${pista.pista || 'Analiza el enunciado'}`;
+  const tipoLabel = pista.tipo === 'formula' ? '📐 Fórmula Excel'
+    : pista.tipo === 'valor' ? '🔢 Valor numérico o %'
+    : '📝 Texto';
+  document.getElementById('compResolverPista').innerHTML =
+    `💡 <b>Pista:</b> ${pista.pista || 'Analiza el enunciado'}<br>
+     <small style="color:#888">Formato esperado: <b>${tipoLabel}</b></small>`;
   document.getElementById('compResolverInput').value = '';
   document.getElementById('compResolverFeedback').classList.add('hidden');
+
+  // Ocultar pista extra previa
+  const pistaExtraComp = document.getElementById('pistaExtraCompDiv');
+  if (pistaExtraComp) pistaExtraComp.style.display = 'none';
+
   document.getElementById('compResolverPanel').style.display = 'block';
   document.getElementById('compResolverInput').focus();
 }
@@ -277,10 +296,51 @@ async function verificarRespuestaComp() {
       }
     }, 1000);
   } else {
+    intentosComp++;
     feedback.textContent = res.message || '❌ Fórmula incorrecta. ¡Intenta de nuevo!';
     feedback.classList.add('err');
     const user = window.getCurrentUser();
     socket.emit('intento-incorrecto', { codigoSala: salaActual, userId: user._id, pistaNumero: pistaCompActual });
+
+    // Mostrar ayuda con fondo negro tras MAX_INTENTOS_COMP intentos
+    if (intentosComp >= MAX_INTENTOS_COMP) {
+      mostrarPistaExtraComp();
+    }
+  }
+}
+
+async function mostrarPistaExtraComp() {
+  let div = document.getElementById('pistaExtraCompDiv');
+  if (!div) {
+    div = document.createElement('div');
+    div.id = 'pistaExtraCompDiv';
+    div.style.cssText = [
+      'background:#000',
+      'color:#fff',
+      'border-radius:10px',
+      'padding:16px 18px',
+      'margin-top:14px',
+      'font-size:0.92em',
+      'line-height:1.6',
+      'border:1px solid #333',
+      'box-shadow:0 4px 20px rgba(0,0,0,0.6)'
+    ].join(';');
+    document.getElementById('compResolverPanel').appendChild(div);
+  }
+  const res = await API.pistaExtra({ ejercicioId: ejercicioComp.id, pistaNumero: pistaCompActual });
+  if (res && res.success) {
+    const alts = res.alternativas && res.alternativas.length
+      ? `<div style="margin-top:8px;color:#ccc">✅ <b>Formas aceptadas:</b> ${res.alternativas.slice(0, 3).join(', ')}</div>`
+      : '';
+    div.innerHTML = `
+      <div style="font-size:1em;font-weight:700;color:#f59e0b;margin-bottom:8px">
+        🆘 Ayuda tras ${intentosComp} intentos
+      </div>
+      <div style="color:#e5e5e5">${res.pista}</div>
+      ${alts}
+      <div style="margin-top:8px;color:#9ca3af;font-size:0.85em">${res.formatoEjemplo}</div>
+    `;
+    div.style.display = 'block';
   }
 }
 
